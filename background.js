@@ -2,47 +2,50 @@ chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({
     id: "trackPackage",
     title: "Track Package",
-    contexts: ["selection"]
+    contexts: ["selection"],
   });
 });
 
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   if (info.menuItemId !== "trackPackage") return;
 
-  const tracking = info.selectionText.trim();
+  const tracking = info.selectionText?.trim();
+  if (!tracking) return;
 
-  // Copy to clipboard
-  await chrome.scripting.executeScript({
-    target: { tabId: tab.id },
-    func: text => navigator.clipboard.writeText(text),
-    args: [tracking]
-  });
+  console.log("Tracking number selected:", tracking);
 
-  // Detect carrier
-  const carrier = detectCarrier(tracking);
-
-  if (!carrier) {
-    chrome.tabs.create({
-      url: "https://google.com/search?q=" + encodeURIComponent(tracking + " tracking")
-    });
-    return;
+  // Copy to clipboard using background page
+  try {
+    await navigator.clipboard.writeText(tracking);
+    console.log("Copied to clipboard");
+  } catch (err) {
+    console.warn("Clipboard write failed:", err);
   }
 
-  chrome.tabs.create({ url: carrier + tracking });
+  const carrierUrl = detectCarrier(tracking);
+
+  const finalUrl = carrierUrl
+    ? carrierUrl + tracking
+    : "https://www.google.com/search?q=" +
+      encodeURIComponent(tracking + " tracking");
+
+  chrome.tabs.create({ url: finalUrl });
 });
 
 function detectCarrier(num) {
-  // UPS: starts with 1Z
   if (/^1Z[0-9A-Z]{16}$/i.test(num)) {
     return "https://wwwapps.ups.com/WebTracking/track?track=yes&trackNums=";
   }
 
-  // FedEx: 12, 15, 20, 22 digits
-  if (/^\d{12}$/.test(num) || /^\d{15}$/.test(num) || /^\d{20}$/.test(num) || /^\d{22}$/.test(num)) {
+  if (
+    /^\d{12}$/.test(num) ||
+    /^\d{15}$/.test(num) ||
+    /^\d{20}$/.test(num) ||
+    /^\d{22}$/.test(num)
+  ) {
     return "https://www.fedex.com/fedextrack/?trknbr=";
   }
 
-  // USPS: 20–22 digits
   if (/^\d{20,22}$/.test(num)) {
     return "https://tools.usps.com/go/TrackConfirmAction?tLabels=";
   }
