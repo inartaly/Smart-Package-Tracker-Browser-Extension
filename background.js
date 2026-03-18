@@ -33,21 +33,51 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
 });
 
 function detectCarrier(num) {
-  if (/^1Z[0-9A-Z]{16}$/i.test(num)) {
-    return "https://wwwapps.ups.com/WebTracking/track?track=yes&trackNums=";
+  const clean = num.replace(/\s+/g, "").toUpperCase();
+
+  // UPS: 1Z + 16 chars
+  if (/^1Z[0-9A-Z]{16}$/.test(clean)) {
+    return "https://www.ups.com/track?track=yes&trackNums=";
   }
 
+  // USPS: 20–22 digits (must be BEFORE FedEx)
+  if (/^\d{20,22}$/.test(clean)) {
+    return "https://tools.usps.com/go/TrackConfirmAction?tLabels=";
+  }
+
+  // FedEx: 12, 15, 20, 22 digits
   if (
-    /^\d{12}$/.test(num) ||
-    /^\d{15}$/.test(num) ||
-    /^\d{20}$/.test(num) ||
-    /^\d{22}$/.test(num)
+    /^\d{12}$/.test(clean) ||
+    /^\d{15}$/.test(clean) ||
+    /^\d{20}$/.test(clean) ||
+    /^\d{22}$/.test(clean)
   ) {
     return "https://www.fedex.com/fedextrack/?trknbr=";
   }
 
-  if (/^\d{20,22}$/.test(num)) {
-    return "https://tools.usps.com/go/TrackConfirmAction?tLabels=";
+  // DHL Express
+  if (
+    /^\d{10}$/.test(clean) ||
+    /^3S[0-9A-Z]+$/.test(clean) ||
+    /^JVGL[0-9A-Z]+$/.test(clean) ||
+    /^GM[0-9A-Z]+$/.test(clean)
+  ) {
+    return "https://www.dhl.com/us-en/home/tracking.html?tracking-id=";
+  }
+
+  // Amazon Logistics (TBA/TBM/TBC)
+  if (/^TB[A-Z]\d{12,20}$/.test(clean)) {
+    return "https://track.amazon.com/tracking/";
+  }
+
+  // LaserShip
+  if (/^[A-Z]\d{8}$/.test(clean) || /^LS\d{8,12}$/.test(clean)) {
+    return "https://www.lasership.com/track/";
+  }
+
+  // OnTrac
+  if (/^C\d{14}$/.test(clean)) {
+    return "https://www.ontrac.com/trackingres.asp?tracking_number=";
   }
 
   return null;
