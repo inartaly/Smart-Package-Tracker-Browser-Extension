@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "Smart Package Tracker",
+  "version": "1.0",
+  "description": "Right‑click any tracking number to automatically detect carrier and open tracking.",
+  "permissions": [
+    "contextMenus",
+    "tabs",
+    "clipboardWrite",
+    "scripting"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  }
+}
